@@ -4,4 +4,4 @@
 
 ```$ npm install```
 ```$ npm update```
-```$ npm start server.js```
+```$ npm start app.js```
