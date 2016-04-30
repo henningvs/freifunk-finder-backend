@@ -1,4 +1,5 @@
-var request = require('request');
+var request = require('request'),
+    jsonschema = require('jsonschema');
 
 var central = 'https://raw.githubusercontent.com/freifunk/directory.api.freifunk.net/master/directory.json';
 
@@ -21,19 +22,45 @@ request(central, function (error, response, body) {
             }else{
                 ffcity = {};
             }
-
-            savetoDB(ffcity);
+            ffcity.dir_name = key;
+            parseFFCity(ffcity);
         });
     });
 
 });
 
-var savetoDB = function(ffcity){
-    var location = ffcity.location;
-    var contact = ffcity.contact;
-    var state = ffcity.state;
-    var feeds = ffcity.feeds;
+var parseFFCity = function(ffcity){
+
     var nodeMaps = ffcity.nodeMaps;
-    var techDetails = ffcity.techDetails;
-    var apiVersion = ffcity.api;
+    if(nodeMaps!=undefined){
+        parseNodeMap(nodeMaps, ffcity);
+    }
+
+};
+
+var parseNodeMap = function (nodeMaps, ffcity) {
+
+    nodeMaps.forEach(function(nodeMap) {
+        request(nodeMap.url, function (error, response, body) {
+            if (!error && response.statusCode == 200) {
+                var validate = jsonschema.validate;
+                try{
+                    nodes = JSON.parse(body);
+                }catch (error){
+                    nodes = {};
+                }
+
+            }else{
+                nodes = {};
+            }
+            if(nodes.nodes != undefined){
+                console.log(ffcity.dir_name);
+                writeToDB(ffcity, nodes);
+            }
+        });
+    });
+};
+
+var writeToDB = function (ffcity, nodes) {
+
 };
