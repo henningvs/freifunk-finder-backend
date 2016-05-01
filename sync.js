@@ -1,6 +1,9 @@
 var request = require('request'),
-    jsonschema = require('jsonschema');
+    jsonschema = require('jsonschema'),
+    MongoClient = require('mongodb').MongoClient,
+    assert = require('assert');
 
+var mongodb = 'mongodb://localhost:27017/fffinder';
 var central = 'https://raw.githubusercontent.com/freifunk/directory.api.freifunk.net/master/directory.json';
 
 var ffcities = {};
@@ -17,14 +20,15 @@ request(central, function (error, response, body) {
     var url = ffcities[key];
 
         request(url, function (error, response, body) {
+
+            ffcity = {};
             if (!error && response.statusCode == 200) {
                 ffcity = JSON.parse(body);
-            }else{
-                ffcity = {};
             }
-            ffcity.dir_name = key;
+
+            ffcity["dir_name"] = this.key;
             parseFFCity(ffcity);
-        });
+        }.bind({key:key}));
     });
 
 });
@@ -54,7 +58,7 @@ var parseNodeMap = function (nodeMaps, ffcity) {
                 nodes = {};
             }
             if(nodes.nodes != undefined){
-                console.log(ffcity.dir_name);
+                console.log("Loaded Nodes for: "+ffcity.dir_name);
                 writeToDB(ffcity, nodes);
             }
         });
@@ -63,4 +67,34 @@ var parseNodeMap = function (nodeMaps, ffcity) {
 
 var writeToDB = function (ffcity, nodes) {
 
+    MongoClient.connect(mongodb, function(err, db) {
+        assert.equal(null, err);
+        var collection = db.collection('fffinder_nodes', function(err, collection) {});
+        collection.createIndex( { "createdAt": 1 }, { expireAfterSeconds: 86400 } );
+
+        var updatedDocs = 0;
+        for (var i = 0; i < nodes.nodes.length; i++){
+            var node = nodes.nodes[i];
+            var nodecityinfo = {"dir_name": ffcity.dir_name};
+            node["ffcity"] = nodecityinfo;
+            node["createdAt"] = new Date();
+
+
+            collection.updateOne({
+                ffcity: {
+                    dir_name: node.ffcity.dir_name
+                },
+                id: node.id},
+                node,
+                {upsert:true, w:1},
+                function(err, result) {
+                    updatedDocs = updatedDocs+1;
+                    if(updatedDocs==nodes.nodes.length){
+                        db.close();
+                        console.log("Wrote Nodes to MongoDB: "+ffcity.dir_name);
+                    }
+                });
+        }
+
+    });
 };
