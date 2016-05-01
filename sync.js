@@ -85,7 +85,7 @@ var writeToDB = function (ffcity, nodes) {
                     dir_name: node.ffcity.dir_name
                 },
                 id: node.id},
-                node,
+                {$set:node},
                 {upsert:true, w:1},
                 function(err, result) {
                     updatedDocs = updatedDocs+1;
