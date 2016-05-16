@@ -73,14 +73,29 @@ var writeToDB = function (ffcity, nodes) {
         collection.createIndex( { "createdAt": 1 }, { expireAfterSeconds: 86400 } );
 
         var updatedDocs = 0;
+        var citydocs = [];
         for (var i = 0; i < nodes.nodes.length; i++){
             var node = nodes.nodes[i];
             var nodecityinfo = {"dir_name": ffcity.dir_name};
             node["ffcity"] = nodecityinfo;
             node["createdAt"] = new Date();
 
+            var updateCommand = {
+            updateOne: {
+                    "filter": {
+                        ffcity: {
+                            dir_name: node.ffcity.dir_name
+                        },
+                        id: node.id
+                    },
+                    "update": {$set: node},
+                    "upsert": true,
+                    "writeConcern": {w:1}
+                }
+            };
 
-            collection.updateOne({
+            citydocs.push(updateCommand);
+            /*collection.updateOne({
                 ffcity: {
                     dir_name: node.ffcity.dir_name
                 },
@@ -93,8 +108,13 @@ var writeToDB = function (ffcity, nodes) {
                         db.close();
                         console.log("Wrote Nodes to MongoDB: "+ffcity.dir_name);
                     }
-                });
+                });*/
         }
+
+
+        var bw = collection.bulkWrite(citydocs);
+        console.log(bw);
+        console.log("Wrote Nodes to MongoDB: "+ffcity.dir_name);
 
     });
 };
